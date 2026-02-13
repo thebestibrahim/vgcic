@@ -105,12 +105,19 @@ export default function PrayerWidget() {
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
         
+        // Check if today is Friday (day 5)
+        const isFriday = now.getDay() === 5;
+        
         // Build prayer list with passed/active states
         const prayerNames = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"] as const;
         let foundNext = false;
         
         const prayerList: PrayerTime[] = prayerNames.map((name) => {
-          const time24 = timings[name].split(" ")[0]; // Remove timezone if present
+          // On Friday, replace Dhuhr with Jumu'ah at 1:30 PM
+          const isJumuah = isFriday && name === "Dhuhr";
+          const displayName = isJumuah ? "Jumu'ah" : name;
+          const time24 = isJumuah ? "13:30" : timings[name].split(" ")[0];
+          
           const prayerMinutes = parseTime(time24);
           const passed = currentMinutes > prayerMinutes;
           const active = !passed && !foundNext;
@@ -118,7 +125,7 @@ export default function PrayerWidget() {
           if (active) foundNext = true;
           
           return {
-            name,
+            name: displayName,
             time: formatTime(time24),
             icon: PRAYER_ICONS[name],
             passed: passed && foundNext ? false : passed,

@@ -29,16 +29,21 @@ export default function Hero() {
         
         const now = new Date();
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const isFriday = now.getDay() === 5;
         
         for (const name of prayerNames) {
-          const time24 = timings[name].split(" ")[0];
+          // On Friday, replace Dhuhr with Jumu'ah at 1:30 PM
+          const isJumuah = isFriday && name === "Dhuhr";
+          const displayName = isJumuah ? "Jumu'ah" : name;
+          const time24 = isJumuah ? "13:30" : timings[name].split(" ")[0];
+          
           const [h, m] = time24.split(":").map(Number);
           const prayerMinutes = h * 60 + m;
           
           if (currentMinutes < prayerMinutes) {
             const period = h >= 12 ? "PM" : "AM";
             const h12 = h % 12 || 12;
-            setNextPrayer({ name, time: `${h12}:${m.toString().padStart(2, "0")} ${period}` });
+            setNextPrayer({ name: displayName, time: `${h12}:${m.toString().padStart(2, "0")} ${period}` });
             return;
           }
         }
