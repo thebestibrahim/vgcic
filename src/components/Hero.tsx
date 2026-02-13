@@ -1,10 +1,64 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Clock, ArrowRight } from "lucide-react";
 import PrayerWidget from "./PrayerWidget";
 
+interface NextPrayerInfo {
+  name: string;
+  time: string;
+}
+
 export default function Hero() {
+  const [nextPrayer, setNextPrayer] = useState<NextPrayerInfo | null>(null);
+
+  useEffect(() => {
+    async function fetchNextPrayer() {
+      try {
+        const lat = 6.4541;
+        const lng = 3.5347;
+        const response = await fetch(
+          `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=3`
+        );
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        const timings = data.data.timings;
+        const prayerNames = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+        
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        
+        for (const name of prayerNames) {
+          const time24 = timings[name].split(" ")[0];
+          const [h, m] = time24.split(":").map(Number);
+          const prayerMinutes = h * 60 + m;
+          
+          if (currentMinutes < prayerMinutes) {
+            const period = h >= 12 ? "PM" : "AM";
+            const h12 = h % 12 || 12;
+            setNextPrayer({ name, time: `${h12}:${m.toString().padStart(2, "0")} ${period}` });
+            return;
+          }
+        }
+        
+        // All passed, next is Fajr tomorrow
+        const fajrTime = timings.Fajr.split(" ")[0];
+        const [fh, fm] = fajrTime.split(":").map(Number);
+        const period = fh >= 12 ? "PM" : "AM";
+        const fh12 = fh % 12 || 12;
+        setNextPrayer({ name: "Fajr", time: `${fh12}:${fm.toString().padStart(2, "0")} ${period}` });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    
+    fetchNextPrayer();
+    const interval = setInterval(fetchNextPrayer, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <section className="relative pt-20 pb-20 px-6 max-w-7xl mx-auto overflow-hidden">
       {/* Background decorative blob */}
@@ -23,7 +77,7 @@ export default function Hero() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-gold-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-gold-500" />
             </span>
-            Next Prayer: Asr 4:15 PM
+            {nextPrayer ? `Next Prayer: ${nextPrayer.name} ${nextPrayer.time}` : "Loading prayer times..."}
           </motion.div>
 
           <motion.h1
